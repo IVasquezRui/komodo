@@ -6,6 +6,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 
+from app.crypto_qr import generate_secure_qr_payload
 from app.models.reservation import Reservation
 from app.models.seat import Seat
 from app.models.trip import Trip
@@ -90,12 +91,16 @@ class ReservationService:
         seat.status = "SOLD"
         trip.available_seats -= 1
         
-        # Generate QR code payload (this allows the mobile app to show it offline)
-        qr_payload = {
-            "r_id": str(request.idempotency_key),
-            "t_id": str(request.trip_id),
-            "s": seat.seat_number,
-        }
+        # Generate cryptographically signed QR code payload (HMAC-SHA256)
+        first_pname = request.passengers[0].full_name if request.passengers else "Passenger"
+        first_doc = request.passengers[0].doc_number if request.passengers else "N/A"
+        signed_qr_data = generate_secure_qr_payload(
+            reservation_id=str(request.idempotency_key),
+            trip_id=str(request.trip_id),
+            seat_number=seat.seat_number,
+            doc_number=first_doc,
+            passenger_name=first_pname,
+        )
 
         reservation = Reservation(
             idempotency_key=request.idempotency_key,
@@ -109,7 +114,7 @@ class ReservationService:
             payment_method=request.payment_method,
             payment_reference=request.payment_reference,
             offline_metadata=request.offline_metadata,
-            qr_code_data=json.dumps(qr_payload),
+            qr_code_data=signed_qr_data,
             purchased_at=datetime.now(timezone.utc),
             synced_at=datetime.now(timezone.utc),
         )

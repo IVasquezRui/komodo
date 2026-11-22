@@ -148,6 +148,53 @@ export const getPaymentApi = async (paymentId: string) => {
   if (!res.ok) throw new Error('Failed to fetch payment details');
   return res.json();
 };
+
+// ---------------------------------------------------------------------------
+// Tickets & Driver Boarding (Proxied via Gateway to Core)
+// ---------------------------------------------------------------------------
+export const validateQrApi = async (data: {
+  qr_data: string;
+  trip_id?: string | null;
+  driver_id?: string | null;
+  offline_verified?: boolean;
+}) => {
+  const res = await fetch(`${API_BASE_URL}/api/v1/tickets/validate-qr`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Error al validar el código QR');
+  }
+  return res.json();
+};
+
+export const getTripManifestApi = async (tripId: string) => {
+  const res = await fetch(`${API_BASE_URL}/api/v1/tickets/manifest/${tripId}`, {
+    headers: getHeaders(),
+  });
+  if (!res.ok) throw new Error('Failed to fetch trip manifest');
+  return res.json();
+};
+
+export const manualBoardApi = async (data: {
+  trip_id: string;
+  seat_number?: number;
+  doc_number?: string;
+  passenger_name?: string;
+}) => {
+  const res = await fetch(`${API_BASE_URL}/api/v1/tickets/manual-board`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to manually board passenger');
+  return res.json();
+};
+
+// ---------------------------------------------------------------------------
+// Reservations (Proxied via Gateway to Core)
 // ---------------------------------------------------------------------------
 export const confirmReservation = async (payload: any, token?: string | null) => {
   const res = await fetch(`${API_BASE_URL}/api/v1/reservations/`, {

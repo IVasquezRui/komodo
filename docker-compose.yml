@@ -157,6 +157,21 @@ services:
     networks:
       - busnet
 
+  # ---- Web Admin Portal (Backoffice React Frontend) ----
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: busplatform-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      gateway:
+        condition: service_healthy
+    networks:
+      - busnet
+
 # ---- Volumes ----
 volumes:
   pgdata:

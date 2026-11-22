@@ -1,0 +1,105 @@
+name: Komodo CI — Multi-Service Verification
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  test-core:
+    name: Core — Python Unit & Cryptographic Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install Core Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pydantic pydantic-settings python-jose passlib bcrypt
+
+      - name: Run Core Security, Payment, QR & Admin Tests
+        run: |
+          cd core
+          PYTHONPATH=. python tests/test_security.py
+          PYTHONPATH=. python tests/test_payment.py
+          PYTHONPATH=. python tests/test_crypto_qr.py
+          PYTHONPATH=. python tests/test_admin.py
+
+  test-gateway:
+    name: Gateway — Go Unit Tests & Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache-dependency-path: gateway/go.sum
+
+      - name: Run Go Unit Tests
+        run: |
+          cd gateway
+          go test -v ./handlers/...
+
+      - name: Build Gateway Binary
+        run: |
+          cd gateway
+          go build -v -o /dev/null ./...
+
+  test-mobile:
+    name: Mobile — TypeScript & Router Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install Mobile Dependencies
+        run: |
+          cd mobile
+          npm ci || npm install
+
+      - name: TypeScript Compile Check
+        run: |
+          cd mobile
+          npx tsc --noEmit
+
+  test-frontend:
+    name: Frontend Admin — Vite Build & Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Frontend Dependencies
+        run: |
+          cd frontend
+          npm ci || npm install
+
+      - name: Typecheck and Build Web Admin
+        run: |
+          cd frontend
+          npm run build
