@@ -2,7 +2,9 @@
 # Go Gateway — Multi-stage build for minimal image size
 # =============================================================================
 # Stage 1: Build the binary
-FROM golang:1.23-alpine AS builder
+FROM golang:alpine AS builder
+
+ENV GOTOOLCHAIN=auto
 
 RUN apk add --no-cache git ca-certificates
 
