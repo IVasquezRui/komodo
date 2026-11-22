@@ -65,6 +65,24 @@ export default function ProfileScreen() {
         </View>
       </View>
 
+      {/* Operaciones en Ruta (Modo Chofer) */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Operaciones en Ruta (Modo Chofer)</Text>
+        <View style={styles.menuCard}>
+          <MenuItem
+            icon="qr-code-outline"
+            label="Escanear Pasajes (Validador QR)"
+            onPress={() => router.push('/driver/scanner' as any)}
+          />
+          <View style={styles.menuSeparator} />
+          <MenuItem
+            icon="clipboard-outline"
+            label="Manifiesto de Pasajeros"
+            onPress={() => router.push('/driver/manifest' as any)}
+          />
+        </View>
+      </View>
+
       {/* Menu */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Cuenta</Text>

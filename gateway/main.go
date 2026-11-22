@@ -88,6 +88,10 @@ func main() {
 		// Reverse Proxy endpoints delegated to FastAPI Core
 		v1.Any("/auth/*action", coreProxy)
 		v1.Any("/auth", coreProxy)
+		v1.Any("/admin/*action", coreProxy)
+		v1.Any("/admin", coreProxy)
+		v1.Any("/tickets/*action", coreProxy)
+		v1.Any("/tickets", coreProxy)
 		v1.Any("/reservations/*action", coreProxy)
 		v1.Any("/reservations", coreProxy)
 		v1.Any("/trips/*action", coreProxy)
