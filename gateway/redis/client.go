@@ -75,6 +75,16 @@ func (c *Client) Del(ctx context.Context, keys ...string) error {
 	return c.rdb.Del(ctx, keys...).Err()
 }
 
+// Publish sends a message to a Redis Pub/Sub channel.
+func (c *Client) Publish(ctx context.Context, channel string, message interface{}) error {
+	return c.rdb.Publish(ctx, channel, message).Err()
+}
+
+// Subscribe returns a PubSub instance subscribed to the given channels.
+func (c *Client) Subscribe(ctx context.Context, channels ...string) *redis.PubSub {
+	return c.rdb.Subscribe(ctx, channels...)
+}
+
 // Close gracefully shuts down the Redis connection pool.
 func (c *Client) Close() error {
 	return c.rdb.Close()

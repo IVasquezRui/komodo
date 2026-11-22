@@ -76,6 +76,11 @@ func HoldSeatHandler(rdb *redisclient.Client, ttl time.Duration) gin.HandlerFunc
 			return
 		}
 
+		// Broadcast real-time SSE event via Redis Pub/Sub
+		channel := fmt.Sprintf("trip:%s:seat_updates", req.TripID)
+		eventPayload := fmt.Sprintf(`{"seat_number":%d,"status":"HOLD","user_id":"%s","expires_in":%d}`, req.SeatNumber, req.UserID, int(ttl.Seconds()))
+		_ = rdb.Publish(ctx, channel, eventPayload)
+
 		c.JSON(http.StatusOK, models.HoldSeatResponse{
 			Status:    "HELD",
 			TripID:    req.TripID,

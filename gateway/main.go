@@ -18,6 +18,7 @@ import (
 	"github.com/busplatform/gateway/handlers"
 	"github.com/busplatform/gateway/models"
 	redisclient "github.com/busplatform/gateway/redis"
+	"github.com/busplatform/gateway/resilience"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
@@ -65,31 +66,53 @@ func main() {
 	// ---- Routes ----
 	r.GET("/health", healthHandler(rdb, dbPool))
 
-	coreProxy := createCoreReverseProxy(cfg.CoreURL)
+	// Circuit breaker protecting downstream Core requests
+	cb := resilience.NewCircuitBreaker(resilience.Settings{
+		Name:        "core-backend",
+		MaxRequests: 3,
+		Timeout:     5 * time.Second,
+		ReadyToTrip: func(counts resilience.Counts) bool {
+			return counts.ConsecutiveFailures >= 5
+		},
+		OnStateChange: func(name string, from resilience.State, to resilience.State) {
+			log.Printf("[circuit-breaker] %s state transition: %s -> %s", name, from, to)
+		},
+	})
+
+	// Differentiated Rate Limiting: 120 rpm for auth, 30 rpm for anonymous
+	rateLimiter := resilience.NewRateLimiter(120, 30)
+
+	coreProxy := createCoreReverseProxy(cfg.CoreURL, cb)
 	r.GET("/docs", coreProxy)
 	r.GET("/openapi.json", coreProxy)
 	r.GET("/redoc", coreProxy)
 
 	v1 := r.Group("/api/v1")
+	v1.Use(rateLimiter.Middleware())
 	{
 		// High-performance local handlers (Redis Shield & DB read pool)
 		v1.GET("/search", handlers.SearchHandler(rdb, dbPool, cfg.SearchCacheTTL))
 		v1.POST("/hold-seat", handlers.HoldSeatHandler(rdb, cfg.SeatHoldTTL))
 		v1.POST("/release-seat", handlers.ReleaseSeatHandler(rdb))
 
+		// Real-time seat updates stream (SSE + Redis Pub/Sub)
+		v1.GET("/trips/:trip_id/seat-stream", handlers.SeatStreamHandler(rdb))
+
 		v1.GET("/ping", func(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{
 				"status":  "ok",
 				"service": "gateway",
-				"version": "0.2.0",
+				"version": "0.3.0",
 			})
 		})
 
-		// Reverse Proxy endpoints delegated to FastAPI Core
+		// Reverse Proxy endpoints delegated to FastAPI Core (with Circuit Breaker)
 		v1.Any("/auth/*action", coreProxy)
 		v1.Any("/auth", coreProxy)
 		v1.Any("/admin/*action", coreProxy)
 		v1.Any("/admin", coreProxy)
+		v1.Any("/notifications/*action", coreProxy)
+		v1.Any("/notifications", coreProxy)
 		v1.Any("/tickets/*action", coreProxy)
 		v1.Any("/tickets", coreProxy)
 		v1.Any("/reservations/*action", coreProxy)
@@ -145,8 +168,9 @@ func ifNotNilClose(p *pgxpool.Pool) {
 	}
 }
 
-// createCoreReverseProxy sets up a reverse proxy forwarding to the FastAPI Core service.
-func createCoreReverseProxy(coreURL string) gin.HandlerFunc {
+// createCoreReverseProxy sets up a reverse proxy forwarding to the FastAPI Core service,
+// wrapped with Circuit Breaker fast-failure protection.
+func createCoreReverseProxy(coreURL string, cb *resilience.CircuitBreaker) gin.HandlerFunc {
 	target, err := url.Parse(coreURL)
 	if err != nil {
 		log.Fatalf("[gateway] Fatal: Invalid Core URL: %v", err)
@@ -160,6 +184,14 @@ func createCoreReverseProxy(coreURL string) gin.HandlerFunc {
 	}
 
 	return func(c *gin.Context) {
+		if cb != nil && cb.State() == resilience.StateOpen {
+			c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{
+				"error":   "CIRCUIT_BREAKER_OPEN",
+				"message": "Backend Core is temporarily degraded. Shedding traffic to prevent cascade.",
+				"state":   cb.State().String(),
+			})
+			return
+		}
 		c.Request.Host = target.Host
 		proxy.ServeHTTP(c.Writer, c.Request)
 	}

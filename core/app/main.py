@@ -105,9 +105,10 @@ async def health_check():
 
 
 # ---- Routers ----
-from app.routers import admin, auth, payments, reservations, tickets, trips
+from app.routers import admin, auth, notifications, payments, reservations, tickets, trips
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
 app.include_router(admin.router, prefix="/api/v1/admin", tags=["admin"])
+app.include_router(notifications.router, prefix="/api/v1/notifications", tags=["notifications"])
 app.include_router(payments.router, prefix="/api/v1/payments", tags=["payments"])
 app.include_router(tickets.router, prefix="/api/v1/tickets", tags=["tickets"])
 app.include_router(reservations.router, prefix="/api/v1/reservations", tags=["reservations"])
