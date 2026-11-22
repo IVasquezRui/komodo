@@ -55,3 +55,17 @@ type HoldSeatResponse struct {
 	ExpiresIn int    `json:"exp_s"`      // Seconds until hold expires
 	HeldBy    string `json:"hb,omitempty"` // User who holds it (only if same user)
 }
+
+// ReleaseSeatRequest is the payload for POST /api/v1/release-seat.
+type ReleaseSeatRequest struct {
+	TripID     string `json:"trip_id"`
+	SeatNumber int    `json:"seat_number"`
+	UserID     string `json:"user_id"`
+}
+
+// ReleaseSeatResponse confirms a seat release.
+type ReleaseSeatResponse struct {
+	Status     string `json:"status"` // "RELEASED" or "NOT_HELD"
+	TripID     string `json:"tid"`
+	SeatNumber int    `json:"sn"`
+}

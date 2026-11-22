@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"os"
 	"os/signal"
 	"strings"
@@ -63,18 +65,35 @@ func main() {
 	// ---- Routes ----
 	r.GET("/health", healthHandler(rdb, dbPool))
 
+	coreProxy := createCoreReverseProxy(cfg.CoreURL)
+	r.GET("/docs", coreProxy)
+	r.GET("/openapi.json", coreProxy)
+	r.GET("/redoc", coreProxy)
+
 	v1 := r.Group("/api/v1")
 	{
+		// High-performance local handlers (Redis Shield & DB read pool)
 		v1.GET("/search", handlers.SearchHandler(rdb, dbPool, cfg.SearchCacheTTL))
 		v1.POST("/hold-seat", handlers.HoldSeatHandler(rdb, cfg.SeatHoldTTL))
-		
+		v1.POST("/release-seat", handlers.ReleaseSeatHandler(rdb))
+
 		v1.GET("/ping", func(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{
 				"status":  "ok",
 				"service": "gateway",
-				"version": "0.1.0",
+				"version": "0.2.0",
 			})
 		})
+
+		// Reverse Proxy endpoints delegated to FastAPI Core
+		v1.Any("/auth/*action", coreProxy)
+		v1.Any("/auth", coreProxy)
+		v1.Any("/reservations/*action", coreProxy)
+		v1.Any("/reservations", coreProxy)
+		v1.Any("/trips/*action", coreProxy)
+		v1.Any("/trips", coreProxy)
+		v1.Any("/payments/*action", coreProxy)
+		v1.Any("/payments", coreProxy)
 	}
 
 	// ---- Start Server with Graceful Shutdown ----
@@ -119,6 +138,26 @@ func main() {
 func ifNotNilClose(p *pgxpool.Pool) {
 	if p != nil {
 		p.Close()
+	}
+}
+
+// createCoreReverseProxy sets up a reverse proxy forwarding to the FastAPI Core service.
+func createCoreReverseProxy(coreURL string) gin.HandlerFunc {
+	target, err := url.Parse(coreURL)
+	if err != nil {
+		log.Fatalf("[gateway] Fatal: Invalid Core URL: %v", err)
+	}
+	proxy := httputil.NewSingleHostReverseProxy(target)
+	proxy.ErrorHandler = func(w http.ResponseWriter, req *http.Request, err error) {
+		log.Printf("[gateway-proxy] Error proxying to Core (%s): %v", req.URL.Path, err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadGateway)
+		w.Write([]byte(`{"error":"CORE_UNAVAILABLE","message":"Backend Core service is temporarily unreachable"}`))
+	}
+
+	return func(c *gin.Context) {
+		c.Request.Host = target.Host
+		proxy.ServeHTTP(c.Writer, c.Request)
 	}
 }
 

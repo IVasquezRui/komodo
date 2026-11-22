@@ -15,6 +15,7 @@ class Seat(Base):
     trip_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("trips.id", ondelete="CASCADE"), index=True)
     
     seat_number: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    deck_number: Mapped[int] = mapped_column(SmallInteger, default=1, server_default="1")
     seat_type: Mapped[str] = mapped_column(String(20), default="STANDARD", server_default="STANDARD")
     status: Mapped[str] = mapped_column(String(20), default="AVAILABLE", server_default="AVAILABLE", index=True)
     price_override: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))

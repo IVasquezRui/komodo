@@ -15,6 +15,7 @@ import { useAuth } from '../lib/auth';
 import { theme } from '../lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { DEMO_USER } from '../lib/mockData';
+import { loginApi } from '../lib/api';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -25,7 +26,8 @@ export default function LoginScreen() {
   const [emailFocused, setEmailFocused] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
 
-  const login = useAuth((state) => state.login);
+  const setSession = useAuth((state) => state.setSession);
+  const loginDemo = useAuth((state) => state.loginDemo);
   const router = useRouter();
 
   // Animación de entrada
@@ -39,30 +41,41 @@ export default function LoginScreen() {
     ]).start();
   }, []);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!email || !password) {
-      setError('Por favor ingresa tu email y contraseña.');
+      setError('Por favor ingresa tu email o teléfono y contraseña.');
       return;
     }
 
     setIsLoading(true);
     setError('');
 
-    // Mock login — acepta DEMO_USER o cualquier combinación válida
-    setTimeout(() => {
+    try {
+      const data = await loginApi(email.trim(), password);
+      setSession(data.access_token, data.refresh_token, {
+        id: data.user.id,
+        fullName: data.user.full_name,
+        phoneNumber: data.user.phone_number,
+        email: data.user.email,
+        role: data.user.role,
+      });
+      router.replace('/(tabs)');
+    } catch (apiErr: any) {
+      // Fallback: Si el servidor backend está offline o son credenciales de demo
       const isDemo =
-        email.toLowerCase() === DEMO_USER.email && password === DEMO_USER.password;
-      const isAnyValid = email.includes('@') && password.length >= 4;
-
-      if (isDemo || isAnyValid) {
-        const name = isDemo ? DEMO_USER.name : email.split('@')[0];
-        login(DEMO_USER.id, name);
+        email.trim().toLowerCase() === DEMO_USER.email.toLowerCase() && password === DEMO_USER.password;
+      if (
+        isDemo ||
+        apiErr.message?.includes('Network request failed') ||
+        apiErr.message?.includes('Failed to fetch')
+      ) {
+        loginDemo(DEMO_USER.id, DEMO_USER.name);
         router.replace('/(tabs)');
       } else {
-        setError('Email o contraseña incorrectos.');
+        setError(apiErr.message || 'Email o contraseña incorrectos.');
         setIsLoading(false);
       }
-    }, 1000);
+    }
   };
 
   return (
@@ -198,7 +211,9 @@ export default function LoginScreen() {
 
         <Text style={styles.footer}>
           ¿No tienes cuenta?{' '}
-          <Text style={styles.footerLink}>Regístrate</Text>
+          <Text style={styles.footerLink} onPress={() => router.push('/register' as any)}>
+            Regístrate
+          </Text>
         </Text>
       </Animated.View>
     </KeyboardAvoidingView>

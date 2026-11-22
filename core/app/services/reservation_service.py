@@ -9,6 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from app.models.reservation import Reservation
 from app.models.seat import Seat
 from app.models.trip import Trip
+from app.models.passenger import Passenger
 from app.schemas.reservation import ReservationCreateRequest
 from app.exceptions import SeatNotAvailableError, IdempotencyConflictError, TripNotFoundError
 
@@ -114,6 +115,20 @@ class ReservationService:
         )
 
         session.add(reservation)
+
+        # Multi-passenger creation if provided
+        if request.passengers:
+            for p in request.passengers:
+                passenger = Passenger(
+                    reservation_id=reservation.id,
+                    full_name=p.full_name,
+                    doc_type=p.doc_type,
+                    doc_number=p.doc_number,
+                    passenger_type=p.passenger_type,
+                    seat_number=p.seat_number,
+                    emergency_contact=p.emergency_contact,
+                )
+                session.add(passenger)
         
         try:
             # We don't commit here, the dependency injection `yield session; await session.commit()` handles it

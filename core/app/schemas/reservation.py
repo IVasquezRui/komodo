@@ -2,6 +2,8 @@ from datetime import datetime
 from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.schemas.payment import PassengerCreateSchema, PassengerResponse
+
 
 class ReservationCreateRequest(BaseModel):
     """
@@ -17,8 +19,9 @@ class ReservationCreateRequest(BaseModel):
     payment_method: str | None = None
     payment_reference: str | None = None
     offline_metadata: dict | None = None
+    passengers: list[PassengerCreateSchema] | None = None
 
-    model_config = ConfigDict(strict=True)
+    model_config = ConfigDict(strict=False)
 
 
 class ReservationResponse(BaseModel):
@@ -32,6 +35,7 @@ class ReservationResponse(BaseModel):
     amount_paid: float
     currency: str
     qr_code_data: str | None = None
+    passengers: list[PassengerResponse] = []
     purchased_at: datetime | None = None
     created_at: datetime
 

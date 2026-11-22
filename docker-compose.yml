@@ -28,6 +28,7 @@ services:
       - ./db/00_extensions.sql:/docker-entrypoint-initdb.d/00_extensions.sql:ro
       - ./db/01_schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
       - ./db/02_seed.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
+      - ./db/03_extended_schema.sql:/docker-entrypoint-initdb.d/03_extended_schema.sql:ro
     command:
       - "postgres"
       # ---- Durability Settings (anti power-outage) ----

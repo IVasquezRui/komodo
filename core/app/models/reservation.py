@@ -39,6 +39,8 @@ class Reservation(Base):
     user = relationship("User")
     seat = relationship("Seat")
     trip = relationship("Trip")
+    passengers = relationship("Passenger", back_populates="reservation", cascade="all, delete-orphan")
+    payments = relationship("Payment", back_populates="reservation")
     
     __table_args__ = (
         ForeignKeyConstraint(

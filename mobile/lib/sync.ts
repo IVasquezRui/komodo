@@ -22,9 +22,9 @@ export const syncPendingTickets = async () => {
   try {
     const pendingTickets = await getPendingTickets();
     
-    for (const ticket of pendingTickets) {
+    for (const ticket of pendingTickets as any[]) {
       try {
-        const payload = JSON.parse((ticket as any).raw_json);
+        const payload = JSON.parse(ticket.raw_json || '{}');
         // Intentar confirmar la reserva con el backend (usando la idempotency_key)
         await confirmReservation({
           idempotency_key: payload.idempotency_key || ticket.id,

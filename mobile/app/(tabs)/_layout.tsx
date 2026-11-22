@@ -7,7 +7,7 @@ type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
 // Devuelve el ícono "filled" cuando está activo y "outline" cuando no
 const tabIcon = (active: IconName, inactive: IconName) =>
-  ({ color, focused }: { color: string; focused: boolean }) => (
+  ({ color, focused }: { color: any; focused: boolean }) => (
     <Ionicons name={focused ? active : inactive} size={24} color={color} />
   );
 

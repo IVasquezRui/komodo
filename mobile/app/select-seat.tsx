@@ -17,11 +17,11 @@ export default function SelectSeatScreen() {
   const { userId } = useAuth();
 
   const [seats, setSeats] = useState<Seat[]>([]);
-  const [selectedSeat, setSelectedSeat] = useState<Seat | null>(null);
+  const [selectedSeats, setSelectedSeats] = useState<Seat[]>([]);
   const [holding, setHolding] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Animación del footer cuando se selecciona asiento
+  // Animación del footer cuando se selecciona al menos un asiento
   const footerAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -30,11 +30,11 @@ export default function SelectSeatScreen() {
 
   useEffect(() => {
     Animated.spring(footerAnim, {
-      toValue: selectedSeat ? 1 : 0,
+      toValue: selectedSeats.length > 0 ? 1 : 0,
       useNativeDriver: true,
       friction: 8,
     }).start();
-  }, [selectedSeat]);
+  }, [selectedSeats]);
 
   const loadSeats = async () => {
     try {
@@ -52,22 +52,50 @@ export default function SelectSeatScreen() {
     }
   };
 
+  const handleToggleSeat = (id: string) => {
+    const seat = seats.find((s) => s.id === id);
+    if (!seat || seat.status === 'SOLD') return;
+
+    setSelectedSeats((prev) => {
+      const alreadySelected = prev.some((s) => s.id === id);
+      if (alreadySelected) {
+        return prev.filter((s) => s.id !== id);
+      }
+      if (prev.length >= 4) {
+        Alert.alert('Límite de asientos', 'Puedes seleccionar un máximo de 4 asientos por compra.');
+        return prev;
+      }
+      return [...prev, seat];
+    });
+  };
+
   const handleHoldSeat = async () => {
-    if (!selectedSeat) return;
+    if (selectedSeats.length === 0) return;
     setHolding(true);
     try {
-      try {
-        const res = await holdSeat(params.tripId as string, parseInt(selectedSeat.number), userId!);
-        const ok = res.status === 'HELD' || res.status === 'HELD_BYPASS' || res.status === 'ALREADY_HELD';
-        if (!ok) throw new Error();
-      } catch {
-        // Backend no disponible → continuar en demo
-      }
+      // Hold each seat concurrently
+      await Promise.all(
+        selectedSeats.map(async (seat) => {
+          try {
+            await holdSeat(params.tripId as string, parseInt(seat.number), userId || 'user_guest');
+          } catch {
+            // Tolerate network failure in demo/offline mode
+          }
+        })
+      );
+
+      const seatIds = selectedSeats.map((s) => s.id).join(',');
+      const seatNums = selectedSeats.map((s) => s.number).join(',');
+      const unitPrice = parseFloat((params.price as string) || '35.00');
+      const totalPrice = (unitPrice * selectedSeats.length).toFixed(2);
+
       router.push(
-        `/checkout?tripId=${params.tripId}&seatId=${selectedSeat.id}&seatNum=${selectedSeat.number}&price=${params.price || '35.00'}&operator=${encodeURIComponent((params.operator as string) || 'Komodo Express')}`
+        `/checkout?tripId=${params.tripId}&seatIds=${seatIds}&seatNums=${seatNums}&price=${totalPrice}&unitPrice=${unitPrice.toFixed(
+          2
+        )}&count=${selectedSeats.length}&operator=${encodeURIComponent((params.operator as string) || 'Komodo Express')}` as any
       );
     } catch {
-      Alert.alert('Error', 'No se pudo reservar el asiento. Inténtalo de nuevo.');
+      Alert.alert('Error', 'No se pudieron reservar los asientos seleccionados. Inténtalo de nuevo.');
     } finally {
       setHolding(false);
     }
@@ -78,7 +106,8 @@ export default function SelectSeatScreen() {
     outputRange: [100, 0],
   });
 
-  const price = params.price || '35.00';
+  const unitPrice = parseFloat((params.price as string) || '35.00');
+  const totalPrice = (unitPrice * Math.max(1, selectedSeats.length)).toFixed(2);
   const operator = (params.operator as string) || 'Komodo Express';
 
   return (
@@ -108,20 +137,19 @@ export default function SelectSeatScreen() {
         ) : (
           <SeatGrid
             seats={seats}
-            selectedSeatId={selectedSeat?.id || null}
-            onSelectSeat={(id) => {
-              const seat = seats.find((s) => s.id === id);
-              if (seat) setSelectedSeat(seat);
-            }}
+            selectedSeatIds={selectedSeats.map((s) => s.id)}
+            onToggleSeat={handleToggleSeat}
           />
         )}
 
-        {/* Selected summary (above footer, inside scroll) */}
-        {selectedSeat && (
+        {/* Selected summary */}
+        {selectedSeats.length > 0 && (
           <View style={styles.selectionInfo}>
             <Ionicons name="checkmark-circle" size={20} color={theme.colors.action} />
             <Text style={styles.selectionText}>
-              Asiento <Text style={styles.selectionBold}>{selectedSeat.number}</Text> seleccionado
+              {selectedSeats.length === 1 ? 'Asiento' : 'Asientos'}{' '}
+              <Text style={styles.selectionBold}>{selectedSeats.map((s) => s.number).join(', ')}</Text>{' '}
+              seleccionado{selectedSeats.length > 1 ? 's' : ''}
             </Text>
           </View>
         )}
@@ -137,12 +165,12 @@ export default function SelectSeatScreen() {
         ]}
       >
         <View style={styles.footerLeft}>
-          <Text style={styles.footerLabel}>PRECIO TOTAL</Text>
-          <Text style={styles.footerPrice}>${price} <Text style={styles.footerCurrency}>USD</Text></Text>
+          <Text style={styles.footerLabel}>TOTAL ({selectedSeats.length} PASAJE{selectedSeats.length > 1 ? 'S' : ''})</Text>
+          <Text style={styles.footerPrice}>${totalPrice} <Text style={styles.footerCurrency}>USD</Text></Text>
         </View>
         <TouchableOpacity
-          style={[styles.continueBtn, (!selectedSeat || holding) && styles.continueBtnDisabled]}
-          disabled={!selectedSeat || holding}
+          style={[styles.continueBtn, (selectedSeats.length === 0 || holding) && styles.continueBtnDisabled]}
+          disabled={selectedSeats.length === 0 || holding}
           onPress={handleHoldSeat}
           activeOpacity={0.85}
         >

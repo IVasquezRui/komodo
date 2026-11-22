@@ -13,6 +13,7 @@ class Trip(Base):
 
     id: Mapped[uuid_pk]
     route_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("routes.id", ondelete="RESTRICT"), index=True)
+    bus_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("buses.id", ondelete="SET NULL"), nullable=True, index=True)
     
     departure_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True, nullable=False)
     arrival_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
@@ -29,4 +30,5 @@ class Trip(Base):
     
     # Relationships
     route = relationship("Route")
+    bus = relationship("Bus", back_populates="trips")
     seats = relationship("Seat", back_populates="trip", lazy="selectin")

@@ -52,6 +52,30 @@ class InsufficientFundsError(Exception):
     pass
 
 
+class InvalidCredentialsError(Exception):
+    """Raised when login credentials do not match."""
+    pass
+
+
+class UserAlreadyExistsError(Exception):
+    """Raised when registering a phone number or email that already exists."""
+    pass
+
+
+class UnauthorizedError(Exception):
+    """Raised when authentication token is missing, invalid or expired."""
+    def __init__(self, message: str = "Authentication required"):
+        self.message = message
+        super().__init__(message)
+
+
+class ForbiddenError(Exception):
+    """Raised when user lacks required role or permissions."""
+    def __init__(self, message: str = "Access forbidden"):
+        self.message = message
+        super().__init__(message)
+
+
 # ---- Standard Error Response ----
 
 def _error_response(
@@ -155,6 +179,46 @@ def register_exception_handlers(app: FastAPI) -> None:
             status_code=status.HTTP_404_NOT_FOUND,
             error_code="TRIP_NOT_FOUND",
             message=f"Trip {exc.trip_id} does not exist or is no longer available.",
+        )
+
+    @app.exception_handler(InvalidCredentialsError)
+    async def invalid_credentials_handler(
+        request: Request, exc: InvalidCredentialsError
+    ) -> JSONResponse:
+        return _error_response(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            error_code="INVALID_CREDENTIALS",
+            message="Invalid phone/email or password.",
+        )
+
+    @app.exception_handler(UserAlreadyExistsError)
+    async def user_exists_handler(
+        request: Request, exc: UserAlreadyExistsError
+    ) -> JSONResponse:
+        return _error_response(
+            status_code=status.HTTP_409_CONFLICT,
+            error_code="USER_ALREADY_EXISTS",
+            message=str(exc) or "User with this phone number or email already exists.",
+        )
+
+    @app.exception_handler(UnauthorizedError)
+    async def unauthorized_handler(
+        request: Request, exc: UnauthorizedError
+    ) -> JSONResponse:
+        return _error_response(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            error_code="UNAUTHORIZED",
+            message=exc.message,
+        )
+
+    @app.exception_handler(ForbiddenError)
+    async def forbidden_handler(
+        request: Request, exc: ForbiddenError
+    ) -> JSONResponse:
+        return _error_response(
+            status_code=status.HTTP_403_FORBIDDEN,
+            error_code="FORBIDDEN",
+            message=exc.message,
         )
 
     @app.exception_handler(IntegrityError)

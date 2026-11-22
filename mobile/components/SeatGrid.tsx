@@ -11,14 +11,35 @@ export interface Seat {
 
 interface SeatGridProps {
   seats: Seat[];
-  selectedSeatId: string | null;
-  onSelectSeat: (seatId: string) => void;
+  selectedSeatId?: string | null;
+  selectedSeatIds?: string[];
+  onSelectSeat?: (seatId: string) => void;
+  onToggleSeat?: (seatId: string) => void;
 }
 
 // Row labels: A, B (left) and C, D (right)
 const COL_LABELS = ['A', 'B', '', 'C', 'D'];
 
-export const SeatGrid: React.FC<SeatGridProps> = ({ seats, selectedSeatId, onSelectSeat }) => {
+export const SeatGrid: React.FC<SeatGridProps> = ({
+  seats,
+  selectedSeatId,
+  selectedSeatIds,
+  onSelectSeat,
+  onToggleSeat,
+}) => {
+  const isSeatSelected = (id: string) => {
+    if (selectedSeatIds) return selectedSeatIds.includes(id);
+    return selectedSeatId === id;
+  };
+
+  const handleSeatPress = (id: string) => {
+    if (onToggleSeat) {
+      onToggleSeat(id);
+    } else if (onSelectSeat) {
+      onSelectSeat(id);
+    }
+  };
+
   // Group into rows of 4 seats: [A, B, C, D]
   const rows: Seat[][] = [];
   for (let i = 0; i < seats.length; i += 4) {
@@ -66,8 +87,8 @@ export const SeatGrid: React.FC<SeatGridProps> = ({ seats, selectedSeatId, onSel
             <SeatButton
               key={seat.id}
               seat={seat}
-              isSelected={selectedSeatId === seat.id}
-              onPress={() => onSelectSeat(seat.id)}
+              isSelected={isSeatSelected(seat.id)}
+              onPress={() => handleSeatPress(seat.id)}
             />
           ))}
 
@@ -79,8 +100,8 @@ export const SeatGrid: React.FC<SeatGridProps> = ({ seats, selectedSeatId, onSel
             <SeatButton
               key={seat.id}
               seat={seat}
-              isSelected={selectedSeatId === seat.id}
-              onPress={() => onSelectSeat(seat.id)}
+              isSelected={isSeatSelected(seat.id)}
+              onPress={() => handleSeatPress(seat.id)}
             />
           ))}
         </View>
