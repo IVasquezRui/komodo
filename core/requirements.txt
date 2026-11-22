@@ -1,0 +1,35 @@
+# =============================================================================
+# FastAPI Core — Python Dependencies
+# =============================================================================
+# Pinned to specific versions for reproducible builds on budget servers
+# =============================================================================
+
+# ---- Web Framework ----
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+pydantic-settings==2.7.1
+
+# ---- Database (Async PostgreSQL) ----
+sqlalchemy[asyncio]==2.0.37
+asyncpg==0.30.0
+greenlet==3.1.1
+
+# ---- Migrations ----
+alembic==1.14.1
+
+# ---- Redis (for health checks from core) ----
+redis[hiredis]==5.2.1
+
+# ---- Security ----
+passlib[bcrypt]==1.7.4
+python-jose[cryptography]==3.3.0
+
+# ---- Utilities ----
+python-dotenv==1.0.1
+httpx==0.28.1
+
+# ---- Dev / Testing ----
+pytest==8.3.4
+pytest-asyncio==0.25.0
+httpx==0.28.1

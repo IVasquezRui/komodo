@@ -1,0 +1,167 @@
+# =============================================================================
+# docker-compose.yml — BusPlatform Multi-Service Orchestration
+# =============================================================================
+# DESIGN FOR RESILIENCE:
+#   - restart: unless-stopped → auto-recovery after power outages
+#   - healthchecks → dependent services wait for readiness
+#   - Redis: no volume (ephemeral by design)
+#   - PostgreSQL: persistent volume + WAL durability settings
+# =============================================================================
+
+services:
+
+  # ---- PostgreSQL + PostGIS (Source of Truth) ----
+  postgres:
+    image: postgis/postgis:16-3.4-alpine
+    container_name: busplatform-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-komodo_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-komodo_secure_password}
+      POSTGRES_DB: ${POSTGRES_DB:-komodo_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      # Persistent data — survives container rebuilds and restarts
+      - pgdata:/var/lib/postgresql/data
+      # Init scripts run in alphabetical order on first start
+      - ./db/00_extensions.sql:/docker-entrypoint-initdb.d/00_extensions.sql:ro
+      - ./db/01_schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+      - ./db/02_seed.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
+    command:
+      - "postgres"
+      # ---- Durability Settings (anti power-outage) ----
+      - "-c" 
+      - "fsync=on"                        # Force write to disk (never lose committed data)
+      - "-c"
+      - "synchronous_commit=on"           # Wait for WAL flush before confirming commit
+      - "-c"
+      - "wal_level=replica"               # Full WAL for point-in-time recovery
+      - "-c"
+      - "max_wal_size=256MB"              # Conservative for budget disks
+      - "-c"
+      - "min_wal_size=64MB"
+      # ---- Connection Tuning (budget VPS: 1-2GB RAM) ----
+      - "-c"
+      - "max_connections=50"              # Conservative — Go gateway pools connections
+      - "-c"
+      - "shared_buffers=128MB"            # 25% of 512MB available RAM
+      - "-c"
+      - "effective_cache_size=256MB"
+      - "-c"
+      - "work_mem=4MB"
+      - "-c"
+      - "maintenance_work_mem=32MB"
+      # ---- Logging ----
+      - "-c"
+      - "log_statement=mod"               # Log INSERT/UPDATE/DELETE (not SELECTs)
+      - "-c"
+      - "log_min_duration_statement=500"  # Log queries slower than 500ms
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-komodo_user} -d ${POSTGRES_DB:-komodo_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - busnet
+
+  # ---- Redis (Ephemeral Shield) ----
+  redis:
+    image: redis:7-alpine
+    container_name: busplatform-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    # NO VOLUME — intentionally ephemeral. See redis/redis.conf for rationale.
+    volumes:
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-komodo_redis_password}", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    networks:
+      - busnet
+
+  # ---- FastAPI Core (Business Logic + ACID Transactions) ----
+  core:
+    build:
+      context: ./core
+      dockerfile: Dockerfile
+    container_name: busplatform-core
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-komodo_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-komodo_secure_password}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-komodo_db}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-komodo_redis_password}
+      CORE_DEBUG: ${CORE_DEBUG:-true}
+      CORE_LOG_LEVEL: ${CORE_LOG_LEVEL:-info}
+      SECRET_KEY: ${SECRET_KEY:-komodo-secret-key-change-me-in-production-64bytes}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:5173,http://localhost:8081}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./core:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - busnet
+
+  # ---- Go Gateway (Redis Shield + High Concurrency) ----
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    container_name: busplatform-gateway
+    restart: unless-stopped
+    environment:
+      GATEWAY_HOST: 0.0.0.0
+      GATEWAY_PORT: 8080
+      GATEWAY_CORE_URL: http://core:8000
+      REDIS_URL: redis://:${REDIS_PASSWORD:-komodo_redis_password}@redis:6379/0
+      DATABASE_URL_PGX: postgres://${POSTGRES_USER:-komodo_user}:${POSTGRES_PASSWORD:-komodo_secure_password}@postgres:5432/${POSTGRES_DB:-komodo_db}?sslmode=disable
+      GATEWAY_READ_TIMEOUT: ${GATEWAY_READ_TIMEOUT:-10s}
+      GATEWAY_WRITE_TIMEOUT: ${GATEWAY_WRITE_TIMEOUT:-15s}
+      SEAT_HOLD_TTL_SECONDS: ${SEAT_HOLD_TTL_SECONDS:-300}
+      SEARCH_CACHE_TTL_SECONDS: ${SEARCH_CACHE_TTL_SECONDS:-120}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:5173,http://localhost:8081}
+    ports:
+      - "8080:8080"
+    depends_on:
+      redis:
+        condition: service_healthy
+      core:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - busnet
+
+# ---- Volumes ----
+volumes:
+  pgdata:
+    driver: local
+
+# ---- Networks ----
+networks:
+  busnet:
+    driver: bridge
