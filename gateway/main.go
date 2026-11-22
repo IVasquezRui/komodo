@@ -117,7 +117,7 @@ func main() {
 		v1.Any("/tickets", coreProxy)
 		v1.Any("/reservations/*action", coreProxy)
 		v1.Any("/reservations", coreProxy)
-		v1.Any("/trips/*action", coreProxy)
+		v1.Any("/trips/:trip_id", coreProxy)
 		v1.Any("/trips", coreProxy)
 		v1.Any("/payments/*action", coreProxy)
 		v1.Any("/payments", coreProxy)
