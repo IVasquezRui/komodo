@@ -208,3 +208,29 @@ export const confirmReservation = async (payload: any, token?: string | null) =>
   }
   return res.json();
 };
+
+// ---------------------------------------------------------------------------
+// Real-Time & Push Notifications (Phase 9)
+// ---------------------------------------------------------------------------
+export const registerDeviceApi = async (pushToken: string, userId?: string) => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/v1/notifications/devices`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({
+        user_id: userId || 'a0000001-0000-0000-0000-000000000001',
+        push_token: pushToken,
+        device_os: 'android',
+        device_name: 'Komodo Mobile Client',
+      }),
+    });
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+};
+
+export const getSeatStreamUrl = (tripId: string) => {
+  return `${API_BASE_URL}/api/v1/trips/${tripId}/seat-stream`;
+};

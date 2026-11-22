@@ -25,16 +25,18 @@ jobs:
           python -m pip install --upgrade pip
           pip install pydantic pydantic-settings python-jose passlib bcrypt
 
-      - name: Run Core Security, Payment, QR & Admin Tests
+      - name: Run Core Security, Payment, QR, Admin, Notifications & Concurrency Tests
         run: |
           cd core
           PYTHONPATH=. python tests/test_security.py
           PYTHONPATH=. python tests/test_payment.py
           PYTHONPATH=. python tests/test_crypto_qr.py
           PYTHONPATH=. python tests/test_admin.py
+          PYTHONPATH=. python tests/test_notifications.py
+          PYTHONPATH=. python tests/test_concurrency.py
 
   test-gateway:
-    name: Gateway — Go Unit Tests & Build
+    name: Gateway — Go Unit Tests, Resilience & Build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -46,10 +48,10 @@ jobs:
           go-version: '1.22'
           cache-dependency-path: gateway/go.sum
 
-      - name: Run Go Unit Tests
+      - name: Run Go Unit Tests & Resilience Tests
         run: |
           cd gateway
-          go test -v ./handlers/...
+          go test -v ./handlers/... ./resilience/...
 
       - name: Build Gateway Binary
         run: |

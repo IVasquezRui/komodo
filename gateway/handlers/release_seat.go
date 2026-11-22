@@ -39,6 +39,10 @@ func ReleaseSeatHandler(rdb *redisclient.Client) gin.HandlerFunc {
 		heldBy, err := rdb.Get(ctx, key)
 		if err == nil && (heldBy == req.UserID || req.UserID == "") {
 			_ = rdb.Del(ctx, key)
+			// Broadcast real-time SSE event via Redis Pub/Sub
+			channel := fmt.Sprintf("trip:%s:seat_updates", req.TripID)
+			eventPayload := fmt.Sprintf(`{"seat_number":%d,"status":"AVAILABLE","user_id":"%s"}`, req.SeatNumber, req.UserID)
+			_ = rdb.Publish(ctx, channel, eventPayload)
 		}
 
 		c.JSON(http.StatusOK, models.ReleaseSeatResponse{
