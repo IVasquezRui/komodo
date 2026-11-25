@@ -16,6 +16,7 @@ import { theme } from '../lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { DEMO_USER } from '../lib/mockData';
 import { loginApi } from '../lib/api';
+import { AnimatedButton } from '../components/AnimatedButton';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -179,21 +180,14 @@ export default function LoginScreen() {
           </TouchableOpacity>
 
           {/* Botón Login */}
-          <TouchableOpacity
-            style={[styles.loginButton, isLoading && styles.loginButtonLoading]}
+          <AnimatedButton
+            label="Iniciar Sesión"
+            variant="cta"
+            loading={isLoading}
             onPress={handleLogin}
-            disabled={isLoading}
-            activeOpacity={0.85}
-          >
-            {isLoading ? (
-              <ActivityIndicator color={theme.colors.background} />
-            ) : (
-              <>
-                <Text style={styles.loginButtonText}>Iniciar Sesión</Text>
-                <Ionicons name="arrow-forward" size={20} color={theme.colors.background} />
-              </>
-            )}
-          </TouchableOpacity>
+            rightIcon={<Ionicons name="arrow-forward" size={20} color="#FFFFFF" />}
+            style={styles.loginButton}
+          />
 
           {/* Divider */}
           <View style={styles.dividerRow}>
@@ -202,11 +196,14 @@ export default function LoginScreen() {
             <View style={styles.dividerLine} />
           </View>
 
-          {/* Google btn (placeholder) */}
-          <TouchableOpacity style={styles.googleButton} activeOpacity={0.85}>
-            <Ionicons name="logo-google" size={20} color={theme.colors.textPrimary} />
-            <Text style={styles.googleButtonText}>Google</Text>
-          </TouchableOpacity>
+          {/* Google btn */}
+          <AnimatedButton
+            label="Continuar con Google"
+            variant="outline"
+            onPress={() => router.push('/register' as any)}
+            leftIcon={<Ionicons name="logo-google" size={20} color={theme.colors.textPrimary} />}
+            style={styles.googleButton}
+          />
         </View>
 
         <Text style={styles.footer}>

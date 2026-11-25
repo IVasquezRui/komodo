@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../lib/theme';
+import { AnimatedButton } from './AnimatedButton';
 
 interface TripCardProps {
   id: string;
@@ -13,15 +14,29 @@ interface TripCardProps {
   price: string;
   seatsLeft: number;
   operator: string;
+  busModel?: string;
   serviceClass: string;
+  hasWifi?: boolean;
+  hasAc?: boolean;
   isFastSelling?: boolean;
   onSelect: () => void;
 }
 
 export const TripCard: React.FC<TripCardProps> = ({
-  id, originName, destName, departureTime, arrivalTime,
-  duration, price, seatsLeft, operator, serviceClass,
-  isFastSelling = false, onSelect
+  originName,
+  destName,
+  departureTime,
+  arrivalTime,
+  duration,
+  price,
+  seatsLeft,
+  operator,
+  busModel,
+  serviceClass,
+  hasWifi = false,
+  hasAc = true,
+  isFastSelling = false,
+  onSelect,
 }) => {
   return (
     <View style={styles.card}>
@@ -29,21 +44,30 @@ export const TripCard: React.FC<TripCardProps> = ({
       <View style={styles.header}>
         <View style={styles.operatorRow}>
           <View style={styles.busIcon}>
-            <Ionicons name="bus" size={16} color={theme.colors.primary} />
+            <Ionicons name="bus" size={18} color={theme.colors.primary} />
           </View>
-          <View>
-            <Text style={styles.operatorText}>{operator}</Text>
-            <Text style={styles.serviceClassText}>{serviceClass}</Text>
+          <View style={styles.operatorInfo}>
+            <Text style={styles.operatorText} numberOfLines={1} maxFontSizeMultiplier={1.25}>
+              {operator}
+            </Text>
+            <Text style={styles.serviceClassText} numberOfLines={1} maxFontSizeMultiplier={1.25}>
+              {busModel ? `${busModel} · ${serviceClass}` : serviceClass}
+            </Text>
           </View>
         </View>
         <View style={styles.rightHeader}>
           {isFastSelling && (
             <View style={styles.fastSellingBadge}>
               <Ionicons name="flame" size={11} color="#fff" />
-              <Text style={styles.fastSellingText}>Fast Selling</Text>
+              <Text style={styles.fastSellingText} numberOfLines={1} maxFontSizeMultiplier={1.2}>
+                Últimos cupos
+              </Text>
             </View>
           )}
-          <Text style={styles.priceText}>${price}</Text>
+          <Text style={styles.priceText} numberOfLines={1} maxFontSizeMultiplier={1.2}>
+            ${price}
+          </Text>
+          <Text style={styles.currencyLabel}>USD</Text>
         </View>
       </View>
 
@@ -51,7 +75,9 @@ export const TripCard: React.FC<TripCardProps> = ({
       <View style={styles.timeline}>
         <View style={styles.timePoint}>
           <Text style={styles.timeText}>{departureTime}</Text>
-          <Text style={styles.terminalText} numberOfLines={1}>{originName}</Text>
+          <Text style={styles.terminalText} numberOfLines={1}>
+            {originName}
+          </Text>
         </View>
 
         <View style={styles.durationContainer}>
@@ -64,7 +90,41 @@ export const TripCard: React.FC<TripCardProps> = ({
 
         <View style={[styles.timePoint, { alignItems: 'flex-end' }]}>
           <Text style={styles.timeText}>{arrivalTime}</Text>
-          <Text style={styles.terminalText} numberOfLines={1}>{destName}</Text>
+          <Text style={styles.terminalText} numberOfLines={1}>
+            {destName}
+          </Text>
+        </View>
+      </View>
+
+      {/* Minimalist Amenities Row */}
+      <View style={styles.amenitiesRow}>
+        <View style={[styles.amenityChip, hasAc ? styles.amenityActive : styles.amenityInactive]}>
+          <Ionicons
+            name="snow-outline"
+            size={12}
+            color={hasAc ? theme.colors.info : theme.colors.textMuted}
+          />
+          <Text
+            style={[styles.amenityText, { color: hasAc ? theme.colors.textPrimary : theme.colors.textMuted }]}
+            numberOfLines={1}
+            maxFontSizeMultiplier={1.2}
+          >
+            {hasAc ? 'A/A' : 'Sin A/A'}
+          </Text>
+        </View>
+        <View style={[styles.amenityChip, hasWifi ? styles.amenityActive : styles.amenityInactive]}>
+          <Ionicons
+            name="wifi-outline"
+            size={12}
+            color={hasWifi ? theme.colors.primary : theme.colors.textMuted}
+          />
+          <Text
+            style={[styles.amenityText, { color: hasWifi ? theme.colors.textPrimary : theme.colors.textMuted }]}
+            numberOfLines={1}
+            maxFontSizeMultiplier={1.2}
+          >
+            {hasWifi ? 'WiFi' : 'Sin WiFi'}
+          </Text>
         </View>
       </View>
 
@@ -74,15 +134,24 @@ export const TripCard: React.FC<TripCardProps> = ({
           <Ionicons
             name="checkmark-circle"
             size={15}
-            color={seatsLeft <= 5 ? '#F59E0B' : theme.colors.action}
+            color={seatsLeft <= 5 ? theme.colors.accent : theme.colors.action}
           />
-          <Text style={[styles.seatsText, seatsLeft <= 5 && styles.seatsTextWarning]}>
-            {seatsLeft} asientos disponibles
+          <Text
+            style={[styles.seatsText, seatsLeft <= 5 && styles.seatsTextWarning]}
+            numberOfLines={1}
+            maxFontSizeMultiplier={1.25}
+          >
+            {seatsLeft} disponibles
           </Text>
         </View>
-        <TouchableOpacity style={styles.selectButton} onPress={onSelect} activeOpacity={0.85}>
-          <Text style={styles.selectButtonText}>Seleccionar</Text>
-        </TouchableOpacity>
+        <AnimatedButton
+          label="Ver viaje"
+          variant="cta"
+          onPress={onSelect}
+          style={styles.selectButton}
+          textStyle={styles.selectButtonText}
+          rightIcon={<Ionicons name="chevron-forward" size={16} color="#FFFFFF" />}
+        />
       </View>
     </View>
   );
@@ -96,27 +165,28 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.md,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 12,
-    elevation: 1,
+    ...theme.shadows.sm,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: theme.spacing.lg,
+    marginBottom: theme.spacing.md,
+    gap: 10,
   },
   operatorRow: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
   },
+  operatorInfo: {
+    flex: 1,
+  },
   busIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
     backgroundColor: theme.colors.primaryContainer,
     justifyContent: 'center',
     alignItems: 'center',
@@ -133,16 +203,17 @@ const styles = StyleSheet.create({
   },
   rightHeader: {
     alignItems: 'flex-end',
-    gap: 4,
+    gap: 2,
   },
   fastSellingBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    backgroundColor: '#F59E0B',
+    backgroundColor: theme.colors.accent,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: theme.radius.full,
+    marginBottom: 2,
   },
   fastSellingText: {
     fontSize: 10,
@@ -150,21 +221,26 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   priceText: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: theme.colors.textPrimary,
+    fontSize: 21,
+    fontWeight: '800',
+    color: theme.colors.primary,
     letterSpacing: -0.5,
+  },
+  currencyLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: theme.colors.textMuted,
   },
   timeline: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: theme.spacing.lg,
+    marginBottom: theme.spacing.md,
   },
   timePoint: {
     flex: 1,
   },
   timeText: {
-    fontSize: 20,
+    fontSize: 19,
     fontWeight: '700',
     color: theme.colors.textPrimary,
   },
@@ -187,17 +263,44 @@ const styles = StyleSheet.create({
   },
   durationLine: {
     flex: 1,
-    height: 1,
+    height: 1.5,
     backgroundColor: theme.colors.border,
   },
   durationText: {
     fontSize: 10,
+    fontWeight: '600',
     color: theme.colors.textMuted,
     position: 'absolute',
     alignSelf: 'center',
     width: '100%',
     textAlign: 'center',
-    top: -14,
+    top: -15,
+  },
+  amenitiesRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: theme.spacing.md,
+  },
+  amenityChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: theme.radius.full,
+    borderWidth: 1,
+  },
+  amenityActive: {
+    backgroundColor: theme.colors.surfaceSlate,
+    borderColor: theme.colors.border,
+  },
+  amenityInactive: {
+    backgroundColor: theme.colors.surfaceMuted,
+    borderColor: theme.colors.borderSlate,
+  },
+  amenityText: {
+    fontSize: 11,
+    fontWeight: '600',
   },
   footer: {
     flexDirection: 'row',
@@ -206,34 +309,30 @@ const styles = StyleSheet.create({
     paddingTop: theme.spacing.md,
     borderTopWidth: 1,
     borderTopColor: theme.colors.surfaceContainer,
+    gap: 10,
   },
   seatsRow: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
   },
   seatsText: {
+    flexShrink: 1,
     fontSize: 12,
-    fontWeight: '500',
-    color: theme.colors.action,
+    fontWeight: '600',
+    color: theme.colors.actionHover,
   },
   seatsTextWarning: {
-    color: '#F59E0B',
+    color: theme.colors.accent,
   },
   selectButton: {
-    backgroundColor: theme.colors.action,
-    paddingVertical: 9,
-    paddingHorizontal: 20,
+    minHeight: 44,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderRadius: theme.radius.xl,
-    shadowColor: theme.colors.action,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 2,
   },
   selectButtonText: {
-    color: theme.colors.background,
-    fontWeight: '700',
     fontSize: 13,
   },
 });

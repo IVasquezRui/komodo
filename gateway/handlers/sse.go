@@ -7,12 +7,12 @@ import (
 	"net/http"
 	"time"
 
-	redisclient "github.com/busplatform/gateway/redis"
+	redisclient "github.com/komodo/gateway/redis"
 	"github.com/gin-gonic/gin"
 )
 
 // SeatStreamHandler streams real-time seat lock and reservation updates using Server-Sent Events (SSE).
-// It subscribes to Redis Pub/Sub channel `trip:<trip_id>:seat_updates`.
+// It subscribes to Redis Pub/Sub channel `komodo:trip:<trip_id>:seat_updates`.
 func SeatStreamHandler(rdb *redisclient.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		tripID := c.Param("trip_id")
@@ -53,7 +53,7 @@ func SeatStreamHandler(rdb *redisclient.Client) gin.HandlerFunc {
 		}
 
 		// Subscribe to Redis Pub/Sub channel
-		channelName := fmt.Sprintf("trip:%s:seat_updates", tripID)
+		channelName := fmt.Sprintf("komodo:trip:%s:seat_updates", tripID)
 		pubsub := rdb.Subscribe(c.Request.Context(), channelName)
 		defer func() {
 			if err := pubsub.Close(); err != nil {

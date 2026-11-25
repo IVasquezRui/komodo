@@ -21,16 +21,20 @@ type APIError struct {
 
 // SearchResult represents a single trip in search results.
 type SearchResult struct {
-	TripID        string    `json:"tid"`           // Short key: trip ID
-	RouteCode     string    `json:"rc"`            // Short key: route code
-	Origin        string    `json:"org"`           // Short key: origin terminal
-	Destination   string    `json:"dst"`           // Short key: destination terminal
-	DepartureAt   time.Time `json:"dep"`           // Short key: departure
-	ArrivalAt     time.Time `json:"arr"`           // Short key: arrival
-	AvailSeats    int       `json:"avl"`           // Short key: available seats
-	PriceUSD      float64   `json:"prc"`           // Short key: price
-	BusPlate      string    `json:"bp,omitempty"`  // Short key: bus plate
-	DriverName    string    `json:"dn,omitempty"`  // Short key: driver name
+	TripID         string          `json:"tid"`                     // Short key: trip ID
+	RouteCode      string          `json:"rc"`                      // Short key: route code
+	OperatorName   string          `json:"operator_name,omitempty"` // Bus line name
+	BusModel       string          `json:"bus_model,omitempty"`     // Fleet model
+	Origin         string          `json:"org"`                     // Short key: origin terminal
+	Destination    string          `json:"dst"`                     // Short key: destination terminal
+	DepartureAt    time.Time       `json:"dep"`                     // Short key: departure
+	ArrivalAt      time.Time       `json:"arr"`                     // Short key: arrival
+	AvailSeats     int             `json:"avl"`                     // Short key: available seats
+	PriceUSD       float64         `json:"prc"`                     // Short key: price
+	PriceUSDCents  int             `json:"price_usd_cents"`         // Integer USD cents
+	BusPlate       string          `json:"bp,omitempty"`            // Short key: bus plate
+	DriverName     string          `json:"dn,omitempty"`            // Short key: driver name
+	Amenities      map[string]any  `json:"amenities,omitempty"`     // Bus amenities JSON
 }
 
 // SearchResponse wraps search results with metadata.

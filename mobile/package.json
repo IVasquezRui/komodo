@@ -39,7 +39,8 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "test": "npx tsc --ignoreConfig --module commonjs --target es2020 --outDir /tmp/komodo-mobile-tests --esModuleInterop __tests__/pricingAndQuantity.test.ts && node /tmp/komodo-mobile-tests/__tests__/pricingAndQuantity.test.js"
   },
   "private": true
 }

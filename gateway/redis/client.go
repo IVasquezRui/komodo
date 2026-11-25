@@ -9,7 +9,7 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// Client wraps the Redis connection with bus-platform-specific operations.
+// Client wraps the Redis connection with Komodo-specific operations.
 type Client struct {
 	rdb *redis.Client
 }

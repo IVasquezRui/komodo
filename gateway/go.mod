@@ -1,4 +1,4 @@
-module github.com/busplatform/gateway
+module github.com/komodo/gateway
 
 go 1.25.0
 

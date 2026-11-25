@@ -10,11 +10,30 @@ import { theme } from '../lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { SeatGrid, Seat } from '../components/SeatGrid';
 import { generateMockSeats } from '../lib/mockData';
+import {
+  calculateTotalUsdCents,
+  clampSeatQuantity,
+  formatUsdFromCents,
+} from '../lib/pricing';
+import { AnimatedButton } from '../components/AnimatedButton';
 
 export default function SelectSeatScreen() {
   const params = useLocalSearchParams();
   const router = useRouter();
   const { userId } = useAuth();
+
+  const requestedQty = clampSeatQuantity(
+    parseInt((params.seatQuantity as string) || '4', 10) || 4,
+    40,
+    6
+  ).quantity;
+  const unitPriceUsdCents = Math.max(
+    100,
+    parseInt((params.unitPriceUsdCents as string) || '', 10) ||
+      Math.round(parseFloat((params.price as string) || '35.00') * 100)
+  );
+  const incomingIdempotencyKey = (params.idempotencyKey as string) || '';
+  const draftBookingId = (params.draftBookingId as string) || '';
 
   const [seats, setSeats] = useState<Seat[]>([]);
   const [selectedSeats, setSelectedSeats] = useState<Seat[]>([]);
@@ -61,8 +80,11 @@ export default function SelectSeatScreen() {
       if (alreadySelected) {
         return prev.filter((s) => s.id !== id);
       }
-      if (prev.length >= 4) {
-        Alert.alert('Límite de asientos', 'Puedes seleccionar un máximo de 4 asientos por compra.');
+      if (prev.length >= requestedQty) {
+        Alert.alert(
+          'Límite de asientos',
+          `Elegiste ${requestedQty} ${requestedQty === 1 ? 'asiento' : 'asientos'}. Deselecciona uno para cambiar tu elección.`
+        );
         return prev;
       }
       return [...prev, seat];
@@ -86,13 +108,16 @@ export default function SelectSeatScreen() {
 
       const seatIds = selectedSeats.map((s) => s.id).join(',');
       const seatNums = selectedSeats.map((s) => s.number).join(',');
-      const unitPrice = parseFloat((params.price as string) || '35.00');
-      const totalPrice = (unitPrice * selectedSeats.length).toFixed(2);
+      const totalCents = calculateTotalUsdCents(unitPriceUsdCents, selectedSeats.length);
+      const unitDollars = (unitPriceUsdCents / 100).toFixed(2);
+      const totalDollars = (totalCents / 100).toFixed(2);
 
       router.push(
-        `/checkout?tripId=${params.tripId}&seatIds=${seatIds}&seatNums=${seatNums}&price=${totalPrice}&unitPrice=${unitPrice.toFixed(
-          2
-        )}&count=${selectedSeats.length}&operator=${encodeURIComponent((params.operator as string) || 'Komodo Express')}` as any
+        `/checkout?tripId=${params.tripId}&seatIds=${seatIds}&seatNums=${seatNums}&price=${totalDollars}&unitPrice=${unitDollars}&unitPriceUsdCents=${unitPriceUsdCents}&totalUsdCents=${totalCents}&count=${selectedSeats.length}&idempotencyKey=${encodeURIComponent(
+          incomingIdempotencyKey
+        )}&draftBookingId=${encodeURIComponent(draftBookingId)}&operator=${encodeURIComponent(
+          (params.operator as string) || 'Komodo Express'
+        )}` as any
       );
     } catch {
       Alert.alert('Error', 'No se pudieron reservar los asientos seleccionados. Inténtalo de nuevo.');
@@ -106,8 +131,8 @@ export default function SelectSeatScreen() {
     outputRange: [100, 0],
   });
 
-  const unitPrice = parseFloat((params.price as string) || '35.00');
-  const totalPrice = (unitPrice * Math.max(1, selectedSeats.length)).toFixed(2);
+  const totalUsdCents = calculateTotalUsdCents(unitPriceUsdCents, Math.max(1, selectedSeats.length));
+  const totalPriceFormatted = formatUsdFromCents(totalUsdCents, false);
   const operator = (params.operator as string) || 'Komodo Express';
 
   return (
@@ -165,24 +190,22 @@ export default function SelectSeatScreen() {
         ]}
       >
         <View style={styles.footerLeft}>
-          <Text style={styles.footerLabel}>TOTAL ({selectedSeats.length} PASAJE{selectedSeats.length > 1 ? 'S' : ''})</Text>
-          <Text style={styles.footerPrice}>${totalPrice} <Text style={styles.footerCurrency}>USD</Text></Text>
+          <Text style={styles.footerLabel}>
+            TOTAL ({selectedSeats.length}/{requestedQty} PASAJE{selectedSeats.length > 1 ? 'S' : ''})
+          </Text>
+          <Text style={styles.footerPrice}>
+            {totalPriceFormatted} <Text style={styles.footerCurrency}>USD</Text>
+          </Text>
         </View>
-        <TouchableOpacity
-          style={[styles.continueBtn, (selectedSeats.length === 0 || holding) && styles.continueBtnDisabled]}
+        <AnimatedButton
+          label="Continuar"
+          variant="cta"
+          loading={holding}
           disabled={selectedSeats.length === 0 || holding}
           onPress={handleHoldSeat}
-          activeOpacity={0.85}
-        >
-          {holding ? (
-            <ActivityIndicator color={theme.colors.background} size="small" />
-          ) : (
-            <>
-              <Text style={styles.continueBtnText}>Continuar</Text>
-              <Ionicons name="arrow-forward" size={18} color={theme.colors.background} />
-            </>
-          )}
-        </TouchableOpacity>
+          style={styles.continueBtn}
+          rightIcon={<Ionicons name="arrow-forward" size={18} color="#FFFFFF" />}
+        />
       </Animated.View>
     </View>
   );

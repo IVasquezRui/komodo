@@ -342,3 +342,99 @@ export async function triggerTravelReminders(
 export function getSeatStreamUrl(tripId: string): string {
   return `${API_BASE}/trips/${tripId}/seat-stream`;
 }
+
+export interface RegisterAccountPayload {
+  full_name: string;
+  phone_number: string;
+  email?: string;
+  password: string;
+  doc_type?: 'V' | 'E' | 'P';
+  doc_number?: string;
+  idempotency_key?: string;
+}
+
+export interface AuthTokenResult {
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+  expires_in: number;
+  user: {
+    id: string;
+    full_name: string;
+    phone_number: string;
+    email?: string | null;
+    role: string;
+  };
+}
+
+export async function registerAccount(payload: RegisterAccountPayload): Promise<AuthTokenResult> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+  };
+  if (payload.idempotency_key) {
+    headers['X-Komodo-Idempotency-Key'] = payload.idempotency_key;
+    headers['Idempotency-Key'] = payload.idempotency_key;
+  }
+
+  const res = await fetch(`${API_BASE}/auth/register`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      full_name: payload.full_name,
+      phone_number: payload.phone_number,
+      email: payload.email || null,
+      password: payload.password,
+      role: 'passenger',
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || err.detail || 'No se pudo completar el registro en Komodo.');
+  }
+  return await res.json();
+}
+
+export async function loginAccount(phoneOrEmail: string, password: string): Promise<AuthTokenResult> {
+  const res = await fetch(`${API_BASE}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phone_or_email: phoneOrEmail, password }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || err.detail || 'Credenciales inválidas.');
+  }
+  return await res.json();
+}
+
+export interface SearchTripItem {
+  tid: string;
+  rc: string;
+  operator_name?: string;
+  bus_model?: string;
+  org: string;
+  dst: string;
+  dep: string;
+  arr: string;
+  avl: number;
+  prc: number;
+  price_usd_cents?: number;
+  amenities?: { wifi?: boolean; ac?: boolean; bath?: boolean; usb?: boolean };
+}
+
+export async function searchTripsWeb(origin: string, destination: string): Promise<SearchTripItem[]> {
+  try {
+    const res = await fetch(
+      `${API_BASE}/search?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}`
+    );
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data.r)) return data.r;
+    }
+  } catch (err) {
+    console.warn('Search API unavailable, returning fallback trips', err);
+  }
+  return [];
+}

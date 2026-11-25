@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/busplatform/gateway/models"
+	"github.com/komodo/gateway/models"
 	"github.com/gin-gonic/gin"
 )
 

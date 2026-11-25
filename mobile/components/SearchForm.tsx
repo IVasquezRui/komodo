@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../lib/theme';
+import { AnimatedButton } from './AnimatedButton';
 
 interface SearchFormProps {
   origin: string;
@@ -53,10 +54,13 @@ export const SearchForm: React.FC<SearchFormProps> = ({ origin, destination, dat
         </View>
       </View>
 
-      <TouchableOpacity style={styles.searchButton} onPress={onSearch}>
-        <Text style={styles.searchButtonText}>Search Routes</Text>
-        <Ionicons name="arrow-forward" size={20} color={theme.colors.background} />
-      </TouchableOpacity>
+      <AnimatedButton
+        label="Buscar Rutas"
+        variant="cta"
+        onPress={onSearch}
+        rightIcon={<Ionicons name="arrow-forward" size={20} color="#FFFFFF" />}
+        style={styles.searchButton}
+      />
     </View>
   );
 };
@@ -118,17 +122,9 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.xl,
   },
   searchButton: {
-    backgroundColor: theme.colors.action,
     borderRadius: theme.radius.xl,
-    padding: theme.spacing.lg,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 8,
-  },
-  searchButtonText: {
-    color: theme.colors.background,
-    fontSize: 16,
-    fontWeight: 'bold',
+    minHeight: 50,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
 });
