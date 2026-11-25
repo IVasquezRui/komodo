@@ -1,43 +1,62 @@
 // ============================================================
-//  KOMODO — Design System / Theme
-//  Todos los tokens de diseño centralizados
+//  KOMODO — Design System / Theme Tokens
+//  Paleta oficial Komodo + Superficies tintadas con profundidad
 // ============================================================
 
 export const theme = {
   colors: {
-    // ── Marca ──────────────────────────────────────────────
-    primary: '#4F46E5',           // Indigo — color principal
-    primaryContainer: '#EEF2FF', // Fondo suave para chips/badges
-    action: '#0D9488',            // Teal — botones de acción
-    accent: '#F59E0B',            // Amber Gold — FAB, destacados
+    // ── Marca Primaria (Púrpura Komodo) ────────────────────
+    primary: '#6D28D9',           // Purple-700 base
+    primaryVibrant: '#7C3AED',    // Purple-600 vibrante / hover
+    primaryDeep: '#4C1D95',       // Purple-900 profundo
+    primaryContainer: '#EDE9FE',  // Lavanda suave para chips/badges
+
+    // ── Acción / CTA Principal (Verde Komodo) ──────────────
+    action: '#10B981',            // Emerald-500 CTA principal
+    actionHover: '#059669',       // Emerald-600 active / pressed
+    actionContainer: '#D1FAE5',   // Fondo suave CTA / disponible
+
+    // ── Acentos Secundarios ────────────────────────────────
+    info: '#06B6D4',              // Cyan-500 (WiFi, rutas, información)
+    infoContainer: '#CFFAFE',
+    accent: '#F59E0B',            // Amber-500 (paradas de descanso, alertas)
+    accentContainer: '#FEF3C7',
 
     // ── Semánticos ─────────────────────────────────────────
-    error: '#DC2626',             // Rojo — errores y alertas
-    success: '#10B981',           // Esmeralda — estados OK
-    warning: '#F59E0B',           // Amber — advertencias
+    error: '#DC2626',
+    success: '#10B981',
+    warning: '#F59E0B',
 
-    // ── Superficies ────────────────────────────────────────
-    background: '#FFFFFF',        // Fondo principal (cards, pantallas blancas)
-    surface: '#F7F9FB',           // Fondo de pantallas completas
-    surfaceContainer: '#F1F5F9',  // Inputs, chips, fondos suaves
+    // ── Superficies con profundidad (adiós blanco plano) ───
+    background: '#FFFFFF',        // Tarjetas elevadas
+    surface: '#F5F3FF',           // Fondo lavanda ultra-suave
+    surfaceSlate: '#F8FAFC',      // Fondo slate frío secundario
+    surfaceContainer: '#EDE9FE',  // Contenedores tintados suaves
+    surfaceMuted: '#F1F5F9',      // Inputs / chips neutros
 
-    // ── Texto ──────────────────────────────────────────────
-    textPrimary: '#1E293B',       // Slate-800 — texto principal
-    textSecondary: '#64748B',     // Slate-500 — texto secundario
-    textMuted: '#94A3B8',         // Slate-400 — placeholders, hints
+    // ── Superficies Oscuras / Headers ──────────────────────
+    darkSurface: '#130F26',
+    darkCard: '#1E1838',
 
-    // ── Bordes ─────────────────────────────────────────────
-    border: '#E2E8F0',            // Slate-200
+    // ── Texto (Contraste WCAG AA) ──────────────────────────
+    textPrimary: '#1E1B4B',       // Indigo-950 legible y profundo
+    textSecondary: '#475569',     // Slate-600
+    textMuted: '#64748B',         // Slate-500
+    textOnBrand: '#FFFFFF',
+
+    // ── Bordes Tintados ────────────────────────────────────
+    border: '#DDD6FE',            // Borde lavanda suave (Violet-200)
+    borderSlate: '#E2E8F0',       // Slate-200
   },
 
   radius: {
-    sm: 4,
-    md: 8,
-    lg: 12,
-    xl: 16,      // Botones e inputs estándar
-    xxl: 24,     // Cards principales
-    xxxl: 32,    // Cards grandes
-    full: 9999,  // Chips pill / badges
+    sm: 6,
+    md: 10,
+    lg: 14,
+    xl: 18,
+    xxl: 24,
+    xxxl: 32,
+    full: 9999,
   },
 
   spacing: {
@@ -49,11 +68,8 @@ export const theme = {
     xxl: 48,
   },
 
-  // ── Tipografía ─────────────────────────────────────────
   typography: {
-    // En React Native (Expo): usa la fuente del sistema (SF Pro en iOS, Roboto en Android)
-    // Para Swift/SwiftUI: se usará SF Pro explícitamente
-    fontFamily: undefined, // undefined = fuente del sistema nativo
+    fontFamily: undefined,
     sizes: {
       xs: 11,
       sm: 13,
@@ -66,32 +82,30 @@ export const theme = {
     },
   },
 
-  // ── Sombras ────────────────────────────────────────────
   shadows: {
     sm: {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.04,
-      shadowRadius: 4,
-      elevation: 1,
+      shadowColor: '#4C1D95',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.06,
+      shadowRadius: 6,
+      elevation: 2,
     },
     md: {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.08,
-      shadowRadius: 12,
-      elevation: 3,
+      shadowColor: '#4C1D95',
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.1,
+      shadowRadius: 14,
+      elevation: 4,
     },
     lg: {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.12,
+      shadowColor: '#4C1D95',
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: 0.16,
       shadowRadius: 24,
-      elevation: 6,
+      elevation: 8,
     },
   },
 };
 
-// ── Tipo exportado para uso en componentes ────────────────
 export type Theme = typeof theme;
 export type ThemeColors = typeof theme.colors;

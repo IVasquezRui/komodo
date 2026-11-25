@@ -2,10 +2,40 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --komodo-primary: #6D28D9;
+  --komodo-primary-vibrant: #7C3AED;
+  --komodo-primary-deep: #4C1D95;
+  --komodo-cta: #10B981;
+  --komodo-cta-hover: #059669;
+  --komodo-cyan: #06B6D4;
+  --komodo-amber: #F59E0B;
+  --komodo-surface-lavender: #F5F3FF;
+  --komodo-surface-slate: #F8FAFC;
+  --komodo-border-tinted: #DDD6FE;
+  --komodo-dark-bg: #0D091A;
+  --komodo-dark-surface: #15102B;
+}
+
 @layer base {
   body {
-    @apply bg-slate-950 text-slate-100 font-sans;
+    @apply bg-[#0D091A] text-slate-100 font-sans;
   }
+}
+
+@keyframes komodo-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.komodo-shimmer {
+  background: linear-gradient(90deg, rgba(109, 40, 217, 0.08) 25%, rgba(124, 58, 237, 0.2) 50%, rgba(109, 40, 217, 0.08) 75%);
+  background-size: 200% 100%;
+  animation: komodo-shimmer 1.6s infinite linear;
 }
 
 /* Custom scrollbars */
@@ -14,14 +44,14 @@
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #0b1120;
+  background: #0D091A;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
+  background: #2E1F5E;
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: #4C1D95;
 }
 
 /* Print styles for official manifest */

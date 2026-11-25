@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/busplatform/gateway/models"
-	redisclient "github.com/busplatform/gateway/redis"
+	"github.com/komodo/gateway/models"
+	redisclient "github.com/komodo/gateway/redis"
 	"github.com/gin-gonic/gin"
 )
 
@@ -32,7 +32,7 @@ func ReleaseSeatHandler(rdb *redisclient.Client) gin.HandlerFunc {
 			return
 		}
 
-		key := fmt.Sprintf("hold:%s:seat:%d", req.TripID, req.SeatNumber)
+		key := fmt.Sprintf("komodo:lock:seat:%s:%d", req.TripID, req.SeatNumber)
 		ctx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Second)
 		defer cancel()
 
@@ -40,7 +40,7 @@ func ReleaseSeatHandler(rdb *redisclient.Client) gin.HandlerFunc {
 		if err == nil && (heldBy == req.UserID || req.UserID == "") {
 			_ = rdb.Del(ctx, key)
 			// Broadcast real-time SSE event via Redis Pub/Sub
-			channel := fmt.Sprintf("trip:%s:seat_updates", req.TripID)
+			channel := fmt.Sprintf("komodo:trip:%s:seat_updates", req.TripID)
 			eventPayload := fmt.Sprintf(`{"seat_number":%d,"status":"AVAILABLE","user_id":"%s"}`, req.SeatNumber, req.UserID)
 			_ = rdb.Publish(ctx, channel, eventPayload)
 		}

@@ -1,5 +1,5 @@
 # =============================================================================
-# docker-compose.yml — BusPlatform Multi-Service Orchestration
+# docker-compose.yml — Komodo Multi-Service Orchestration
 # =============================================================================
 # DESIGN FOR RESILIENCE:
 #   - restart: unless-stopped → auto-recovery after power outages
@@ -13,7 +13,7 @@ services:
   # ---- PostgreSQL + PostGIS (Source of Truth) ----
   postgres:
     image: postgis/postgis:16-3.4-alpine
-    container_name: busplatform-postgres
+    container_name: komodo-postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-komodo_user}
@@ -29,6 +29,7 @@ services:
       - ./db/01_schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
       - ./db/02_seed.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
       - ./db/03_extended_schema.sql:/docker-entrypoint-initdb.d/03_extended_schema.sql:ro
+      - ./db/04_venezuela_operators_schema.sql:/docker-entrypoint-initdb.d/04_venezuela_operators_schema.sql:ro
     command:
       - "postgres"
       # ---- Durability Settings (anti power-outage) ----
@@ -65,12 +66,12 @@ services:
       retries: 5
       start_period: 30s
     networks:
-      - busnet
+      - komodo-net
 
   # ---- Redis (Ephemeral Shield) ----
   redis:
     image: redis:7-alpine
-    container_name: busplatform-redis
+    container_name: komodo-redis
     restart: unless-stopped
     ports:
       - "6379:6379"
@@ -85,14 +86,14 @@ services:
       retries: 5
       start_period: 10s
     networks:
-      - busnet
+      - komodo-net
 
   # ---- FastAPI Core (Business Logic + ACID Transactions) ----
   core:
     build:
       context: ./core
       dockerfile: Dockerfile
-    container_name: busplatform-core
+    container_name: komodo-core
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-komodo_user}
@@ -111,6 +112,7 @@ services:
       - "8000:8000"
     volumes:
       - ./core:/app
+      - ./db:/app/db:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -121,14 +123,14 @@ services:
       retries: 3
       start_period: 30s
     networks:
-      - busnet
+      - komodo-net
 
   # ---- Go Gateway (Redis Shield + High Concurrency) ----
   gateway:
     build:
       context: ./gateway
       dockerfile: Dockerfile
-    container_name: busplatform-gateway
+    container_name: komodo-gateway
     restart: unless-stopped
     environment:
       GATEWAY_HOST: 0.0.0.0
@@ -155,14 +157,14 @@ services:
       retries: 3
       start_period: 15s
     networks:
-      - busnet
+      - komodo-net
 
   # ---- Web Admin Portal (Backoffice React Frontend) ----
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: busplatform-frontend
+    container_name: komodo-frontend
     restart: unless-stopped
     ports:
       - "3000:80"
@@ -170,7 +172,7 @@ services:
       gateway:
         condition: service_healthy
     networks:
-      - busnet
+      - komodo-net
 
 # ---- Volumes ----
 volumes:
@@ -179,5 +181,5 @@ volumes:
 
 # ---- Networks ----
 networks:
-  busnet:
+  komodo-net:
     driver: bridge

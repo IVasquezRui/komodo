@@ -1,7 +1,7 @@
 """
 FastAPI Core Application — Entry Point
 
-The transactional brain of the bus platform.
+The transactional brain of Komodo.
 Handles business logic, ACID transactions, and data integrity.
 """
 
@@ -31,7 +31,7 @@ async def lifespan(app: FastAPI):
     - Startup: verify DB connection
     - Shutdown: dispose connection pool cleanly
     """
-    logger.info("Starting BusPlatform Core...")
+    logger.info("Starting Komodo Core...")
     logger.info("Database: %s@%s/%s", settings.postgres_user, settings.postgres_host, settings.postgres_db)
 
     # Verify DB connectivity on startup
@@ -56,9 +56,9 @@ async def lifespan(app: FastAPI):
 
 # ---- Application Factory ----
 app = FastAPI(
-    title="BusPlatform Core API",
+    title="Komodo Core API",
     description=(
-        "Transactional core for the ultra-resilient bus ticket platform. "
+        "Transactional core for the ultra-resilient Komodo bus ticket platform. "
         "Handles ACID transactions, seat reservations, and data integrity."
     ),
     version="0.1.0",

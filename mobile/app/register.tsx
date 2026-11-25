@@ -16,6 +16,7 @@ import { useAuth } from '../lib/auth';
 import { theme } from '../lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { registerApi } from '../lib/api';
+import { AnimatedButton } from '../components/AnimatedButton';
 
 export default function RegisterScreen() {
   const [fullName, setFullName] = useState('');
@@ -193,20 +194,14 @@ export default function RegisterScreen() {
             </View>
 
             {/* Botón de Registro */}
-            <TouchableOpacity
-              style={[styles.registerButton, isLoading && styles.buttonDisabled]}
+            <AnimatedButton
+              label="Crear Cuenta"
+              variant="cta"
+              loading={isLoading}
               onPress={handleRegister}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <ActivityIndicator color={theme.colors.background} />
-              ) : (
-                <>
-                  <Text style={styles.registerButtonText}>Crear Cuenta</Text>
-                  <Ionicons name="arrow-forward" size={18} color={theme.colors.background} />
-                </>
-              )}
-            </TouchableOpacity>
+              rightIcon={<Ionicons name="arrow-forward" size={18} color="#FFFFFF" />}
+              style={styles.registerButton}
+            />
 
             <TouchableOpacity style={styles.loginLinkSection} onPress={() => router.back()}>
               <Text style={styles.loginLinkText}>

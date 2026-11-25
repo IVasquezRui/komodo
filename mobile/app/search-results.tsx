@@ -1,8 +1,15 @@
 import { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, FlatList,
-  TouchableOpacity, ActivityIndicator, ScrollView,
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  ActivityIndicator,
+  ScrollView,
+  AccessibilityInfo,
 } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { searchTrips } from '../lib/api';
 import { theme } from '../lib/theme';
@@ -10,7 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { TripCard } from '../components/TripCard';
 import { MOCK_TRIPS } from '../lib/mockData';
 
-const FILTERS = ['Todos', 'Hora', 'Precio', 'Operador'];
+const FILTERS = ['Todos', 'Hora', 'Precio', 'Operador', 'Con A/A'];
 
 export default function SearchResultsScreen() {
   const params = useLocalSearchParams();
@@ -19,6 +26,14 @@ export default function SearchResultsScreen() {
   const [results, setResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState('Todos');
+  const [isOfflineCache, setIsOfflineCache] = useState(false);
+  const [reduceMotion, setReduceMotion] = useState(false);
+
+  useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then(setReduceMotion)
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     loadResults();
@@ -27,10 +42,16 @@ export default function SearchResultsScreen() {
   const loadResults = async () => {
     try {
       setLoading(true);
-      const data = await searchTrips(origin as string, destination as string, date as string);
-      setResults(data.r || []);
+      setIsOfflineCache(false);
+      const data = await searchTrips(
+        (origin as string) || 'Caracas',
+        (destination as string) || 'Maracaibo',
+        (date as string) || ''
+      );
+      const items = data.r || [];
+      setResults(items.length > 0 ? items : MOCK_TRIPS);
     } catch {
-      // Backend no disponible → usar mock data
+      setIsOfflineCache(true);
       setResults(MOCK_TRIPS);
     } finally {
       setLoading(false);
@@ -42,29 +63,80 @@ export default function SearchResultsScreen() {
 
   const formatDuration = (dep: string, arr: string) => {
     const diffMs = new Date(arr).getTime() - new Date(dep).getTime();
-    const h = Math.floor(diffMs / 3_600_000);
-    const m = Math.round((diffMs % 3_600_000) / 60_000);
+    const h = Math.max(0, Math.floor(diffMs / 3_600_000));
+    const m = Math.max(0, Math.round((diffMs % 3_600_000) / 60_000));
     return `${h}h ${m}m`;
   };
 
-  const renderTrip = ({ item }: { item: any }) => (
-    <TripCard
-      id={item.tid}
-      originName={item.org}
-      destName={item.dst}
-      departureTime={formatTime(item.dep)}
-      arrivalTime={formatTime(item.arr)}
-      duration={formatDuration(item.dep, item.arr)}
-      price={item.prc}
-      seatsLeft={item.avl}
-      operator={item.rc}
-      serviceClass={item.serviceClass || 'Standard'}
-      isFastSelling={item.isFastSelling || item.avl < 5}
-      onSelect={() =>
-        router.push(`/select-seat?tripId=${item.tid}&price=${item.prc}&operator=${item.rc}`)
+  const filteredResults = [...results]
+    .filter((item) => {
+      if (activeFilter === 'Con A/A') {
+        return item.amenities?.ac !== false;
       }
-    />
-  );
+      return true;
+    })
+    .sort((a, b) => {
+      if (activeFilter === 'Precio') {
+        const pa = Number(a.price_usd_cents ?? Math.round(Number(a.prc || 0) * 100));
+        const pb = Number(b.price_usd_cents ?? Math.round(Number(b.prc || 0) * 100));
+        return pa - pb;
+      }
+      if (activeFilter === 'Operador') {
+        return String(a.operator_name || a.rc).localeCompare(String(b.operator_name || b.rc));
+      }
+      return new Date(a.dep).getTime() - new Date(b.dep).getTime();
+    });
+
+  const renderTrip = ({ item, index }: { item: any; index: number }) => {
+    const unitPriceCents =
+      typeof item.price_usd_cents === 'number'
+        ? item.price_usd_cents
+        : Math.round(Number(item.prc || 35) * 100);
+    const formattedPrice = (unitPriceCents / 100).toFixed(2);
+    const operatorName = item.operator_name || item.rc || 'Komodo Express';
+    const hasWifi = Boolean(item.amenities?.wifi);
+    const hasAc = item.amenities?.ac !== undefined ? Boolean(item.amenities.ac) : true;
+
+    const card = (
+      <TripCard
+        id={item.tid}
+        originName={item.org}
+        destName={item.dst}
+        departureTime={formatTime(item.dep)}
+        arrivalTime={formatTime(item.arr)}
+        duration={formatDuration(item.dep, item.arr)}
+        price={formattedPrice}
+        seatsLeft={item.avl}
+        operator={operatorName}
+        busModel={item.bus_model}
+        serviceClass={item.serviceClass || item.rc || 'Ejecutivo'}
+        hasWifi={hasWifi}
+        hasAc={hasAc}
+        isFastSelling={item.isFastSelling || item.avl <= 5}
+        onSelect={() =>
+          router.push(
+            `/trip-details?tripId=${encodeURIComponent(item.tid)}&operator=${encodeURIComponent(
+              operatorName
+            )}&busModel=${encodeURIComponent(item.bus_model || 'Marcopolo Paradiso G6 1800 DD')}&origin=${encodeURIComponent(
+              item.org
+            )}&destination=${encodeURIComponent(item.dst)}&dep=${encodeURIComponent(
+              item.dep
+            )}&arr=${encodeURIComponent(item.arr)}&unitPriceCents=${unitPriceCents}&availableSeats=${
+              item.avl
+            }&routeCode=${encodeURIComponent(item.rc || 'CCS-MCB')}&hasWifi=${hasWifi}&hasAc=${hasAc}` as any
+          )
+        }
+      />
+    );
+
+    if (reduceMotion) return card;
+
+    return (
+      <Animated.View entering={FadeInDown.delay(Math.min(index, 6) * 55).duration(320)}>
+        {card}
+      </Animated.View>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -74,15 +146,26 @@ export default function SearchResultsScreen() {
           <Ionicons name="arrow-back" size={22} color={theme.colors.textPrimary} />
         </TouchableOpacity>
         <View style={styles.headerInfo}>
-          <Text style={styles.headerRoute}>Caracas → Maracaibo</Text>
-          <Text style={styles.headerMeta}>
-            {new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} · 1 Pasajero
+          <Text style={styles.headerRoute} numberOfLines={1} maxFontSizeMultiplier={1.25}>
+            {(origin as string) || 'Caracas'} → {(destination as string) || 'Maracaibo'}
+          </Text>
+          <Text style={styles.headerMeta} numberOfLines={1}>
+            {new Date().toLocaleDateString('es-VE', { day: 'numeric', month: 'short' })} · {filteredResults.length} opciones
           </Text>
         </View>
-        <TouchableOpacity style={styles.filterIconBtn}>
-          <Ionicons name="options-outline" size={22} color={theme.colors.textPrimary} />
+        <TouchableOpacity style={styles.filterIconBtn} onPress={loadResults}>
+          <Ionicons name="refresh-outline" size={20} color={theme.colors.primary} />
         </TouchableOpacity>
       </View>
+
+      {isOfflineCache && (
+        <View style={styles.offlineBanner}>
+          <Ionicons name="cloud-offline-outline" size={15} color={theme.colors.accent} />
+          <Text style={styles.offlineText} numberOfLines={2}>
+            Sin conexión — Mostrando horarios guardados localmente
+          </Text>
+        </View>
+      )}
 
       {/* Filter chips */}
       <ScrollView
@@ -97,7 +180,11 @@ export default function SearchResultsScreen() {
             style={[styles.filterChip, activeFilter === f && styles.filterChipActive]}
             onPress={() => setActiveFilter(f)}
           >
-            <Text style={[styles.filterChipText, activeFilter === f && styles.filterChipTextActive]}>
+            <Text
+              style={[styles.filterChipText, activeFilter === f && styles.filterChipTextActive]}
+              numberOfLines={1}
+              maxFontSizeMultiplier={1.25}
+            >
               {f}
             </Text>
           </TouchableOpacity>
@@ -108,11 +195,11 @@ export default function SearchResultsScreen() {
       {loading ? (
         <View style={styles.loader}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
-          <Text style={styles.loaderText}>Buscando viajes...</Text>
+          <Text style={styles.loaderText}>Buscando salidas disponibles...</Text>
         </View>
       ) : (
         <FlatList
-          data={results}
+          data={filteredResults}
           keyExtractor={(item: any) => item.tid}
           renderItem={renderTrip}
           contentContainerStyle={styles.list}
@@ -120,7 +207,7 @@ export default function SearchResultsScreen() {
             <View style={styles.empty}>
               <Ionicons name="bus-outline" size={56} color={theme.colors.border} />
               <Text style={styles.emptyText}>No hay viajes disponibles.</Text>
-              <Text style={styles.emptySubText}>Prueba con otra fecha.</Text>
+              <Text style={styles.emptySubText}>Prueba con otro filtro o fecha.</Text>
             </View>
           }
         />
@@ -135,17 +222,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: theme.spacing.lg,
-    paddingTop: 60,
+    paddingTop: 58,
     backgroundColor: theme.colors.background,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
     gap: theme.spacing.sm,
   },
   backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: theme.colors.surfaceContainer,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: theme.colors.primaryContainer,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -161,31 +248,50 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   filterIconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: theme.colors.surfaceContainer,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: theme.colors.primaryContainer,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  offlineBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: theme.colors.accentContainer,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.accent,
+  },
+  offlineText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#92400E',
   },
   filtersBar: {
     backgroundColor: theme.colors.background,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
-    maxHeight: 56,
+    maxHeight: 60,
   },
   filtersContent: {
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: 10,
     gap: theme.spacing.sm,
+    alignItems: 'center',
   },
   filterChip: {
+    minHeight: 36,
     paddingHorizontal: 16,
     paddingVertical: 7,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surfaceContainer,
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.border,
+    justifyContent: 'center',
   },
   filterChipActive: {
     backgroundColor: theme.colors.primary,
@@ -197,11 +303,11 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
   },
   filterChipTextActive: {
-    color: theme.colors.background,
+    color: '#FFFFFF',
   },
   loader: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
   loaderText: { color: theme.colors.textSecondary, fontSize: 14 },
-  list: { padding: theme.spacing.md },
+  list: { padding: theme.spacing.md, paddingBottom: 32 },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80, gap: 8 },
   emptyText: { fontSize: 16, fontWeight: '600', color: theme.colors.textSecondary },
   emptySubText: { fontSize: 13, color: theme.colors.textMuted },

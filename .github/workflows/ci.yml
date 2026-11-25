@@ -77,10 +77,11 @@ jobs:
           cd mobile
           npm ci || npm install
 
-      - name: TypeScript Compile Check
+      - name: TypeScript Compile Check & 8.1# Unit Tests
         run: |
           cd mobile
           npx tsc --noEmit
+          npm test
 
   test-frontend:
     name: Frontend Admin — Vite Build & Typecheck

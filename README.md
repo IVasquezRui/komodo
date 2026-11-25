@@ -87,7 +87,7 @@ komodo/
 │   │   ├── komodo_plan.md
 │   │   └── DESIGN.md
 │   ├── 01_Fase0_Infraestructura/          # Docker Compose, PostGIS y Redis efímero
-│   │   └── walkthrough-busbud-copy.md
+│   │   └── walkthrough-komodo-infraestructura.md
 │   ├── 02_Fase1_Core_FastAPI/             # Core transaccional, ACID y resolución de concurrencia
 │   │   ├── komodo-Core&Fase1(resultados).md
 │   │   └── komodo-reforma_fase1.md

@@ -1,1 +1,1 @@
-# BusPlatform Core — FastAPI Application
+# Komodo Core — FastAPI Application

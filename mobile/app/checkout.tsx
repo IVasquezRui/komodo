@@ -91,7 +91,7 @@ export default function CheckoutScreen() {
     }
 
     setLoading(true);
-    const idempotencyKey = generateUUID();
+    const idempotencyKey = (params.idempotencyKey as string) || generateUUID();
     const reference = paymentRef.trim() || `REF-${Date.now().toString().slice(-8)}`;
 
     const netState = await NetInfo.fetch();

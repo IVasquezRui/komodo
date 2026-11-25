@@ -23,9 +23,11 @@ export default function HomeScreen() {
     ? userName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
     : 'KM';
 
-  const handleSearch = () => {
+  const handleSearch = (orig = 'Caracas', dest = 'Maracaibo') => {
     router.push(
-      `/search-results?origin=term_ccs&destination=term_mao&date=${new Date().toISOString().split('T')[0]}`
+      `/search-results?origin=${encodeURIComponent(orig)}&destination=${encodeURIComponent(
+        dest
+      )}&date=${new Date().toISOString().split('T')[0]}`
     );
   };
 
@@ -56,7 +58,7 @@ export default function HomeScreen() {
         destination="Maracaibo"
         date="Hoy"
         travelers={1}
-        onSearch={handleSearch}
+        onSearch={() => handleSearch('Caracas', 'Maracaibo')}
       />
 
       {/* Rutas Populares */}
@@ -64,9 +66,13 @@ export default function HomeScreen() {
         <Text style={styles.sectionTitle}>Rutas Populares</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsRow}>
           {POPULAR_ROUTES.map((route, i) => (
-            <TouchableOpacity key={i} style={styles.routeChip} onPress={handleSearch}>
+            <TouchableOpacity
+              key={i}
+              style={styles.routeChip}
+              onPress={() => handleSearch(route.from.city, route.to.city)}
+            >
               <Ionicons name="trending-up-outline" size={14} color={theme.colors.primary} />
-              <Text style={styles.routeChipText}>
+              <Text style={styles.routeChipText} numberOfLines={1} maxFontSizeMultiplier={1.25}>
                 {route.from.city} → {route.to.city}
               </Text>
             </TouchableOpacity>
@@ -87,7 +93,7 @@ export default function HomeScreen() {
           <TouchableOpacity
             key={item.id}
             style={styles.recentCard}
-            onPress={handleSearch}
+            onPress={() => handleSearch(item.origin, item.destination)}
           >
             <View style={styles.recentIconBox}>
               <Ionicons name="time-outline" size={20} color={theme.colors.textMuted} />
